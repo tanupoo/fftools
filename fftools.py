@@ -3,6 +3,128 @@ from subprocess import Popen, PIPE, DEVNULL
 import shlex
 import math
 import json
+from datetime import timedelta
+from shutil import get_terminal_size
+import os
+
+class ffPrintInfo():
+
+    def __init__(self, print_mode=0, verbose=False):
+        """
+        print_mode: 0:short, 1:middle, 2:long
+        """
+        self.print_mode = print_mode
+        self.verbose = verbose
+        if print_mode == 0:
+            self.hdrs = {
+                    "str_duration": "Duration",
+                    "fixed_filename": "Filename ",
+                    }
+        elif print_mode == 1:
+            self.hdrs = {
+                    "str_duration": "Duration",
+                    "str_bit_rate": "Bitrate ",
+                    "coded_width": "W   ",
+                    "coded_height": "H   ",
+                    "fixed_filename": "Filename ",
+                    }
+        else:
+            self.hdrs = {
+                    "str_duration": "Duration       ",
+                    "str_bit_rate": "Bitrate ",
+                    "coded_width": "W   ",
+                    "coded_height": "H   ",
+                    "aspect_ratio": "Aspect R.",
+                    "profile": "Prof.",
+                    "level": "Lv.",
+                    "filesize": "Filesize   ",
+                    "fixed_filename": "Filename ",
+                    }
+        #
+        self.header_format = " ".join([f"{{:{len(i)}}}"
+                                       for i in self.hdrs.values()])
+        self.hdr_sep = " ".join([ "-"*len(i) for i in self.hdrs.values() ])
+        self.left_cols_len = (len(self.hdr_sep) -
+                              len(self.hdrs["fixed_filename"]) - 1)
+
+    def print_header(self):
+        print(self.header_format.format(*self.hdrs.values()))
+        print(self.hdr_sep)
+
+    def print_info(self, path, ffinfo):
+        """
+        ffinfo: output of get_stream_info()
+        """
+        # make duration
+        def get_duration(ffinfo):
+            duration = ffinfo.get("duration")
+            if duration is not None:
+                try:
+                    duration = float(duration)
+                except Exception as e:
+                    return 0
+                else:
+                    return duration
+            # e.g. 00:03:20.720000000
+            d = "00:00:00.000000000"
+            str_dur = ffinfo.get("tags",{"DURATION":d}).get("DURATION",d)
+            return sum([p*q for p,q in
+                        zip([float(i) for i in str_dur.split(":")],
+                            [3600,60,1])])
+        def str_duration(duration):
+            str_dur = str(timedelta(seconds=duration)).rjust(15,"0")
+            if self.print_mode == 2:
+                return str_dur[:15]
+            else:
+                return str_dur[:8]
+        # get bit rate.
+        def get_bitrate(ffinfo):
+            """
+            bps
+            """
+            br = ffinfo.get("bit_rate")
+            if br is not None:
+                return float(br)
+            return ffinfo["filesize"]*8000000 / ffinfo["duration"]
+        def str_bitrate(bitrate):
+            """
+            kbps
+            """
+            a, b = str(bitrate/1000).split(".")
+            return "{}.{}".format(a.rjust(4," "), b[:3].ljust(3,"0"))
+        # make profile name
+        def get_profile(ffinfo):
+            profile_map = {
+                    "Constrained Baseline": "CBase",
+                    "Baseline": "Base",
+                    "Extended": "Ext",
+                    "Multiview High": "MHigh",
+                    "Stereo High": "SHigh",
+                    }
+            return profile_map.get(ffinfo["profile"], ffinfo["profile"])
+        # fix filename
+        def fix_filename(path):
+            if self.print_mode == 2:
+                return path
+            else:
+                name_len = (get_terminal_size((80,0)).columns -
+                            self.left_cols_len - 1)
+                return os.path.basename(path)[:name_len]
+        #
+        # set info
+        #
+        ffinfo["filesize"] = os.stat(path).st_size / 1000000  # MB
+        ffinfo["duration"] = get_duration(ffinfo)
+        ffinfo["str_duration"] = str_duration(ffinfo["duration"])
+        # fileseize and duration must be set before bit_rate is set.
+        ffinfo["bit_rate"] = get_bitrate(ffinfo)
+        ffinfo["str_bit_rate"] = str_bitrate(ffinfo["bit_rate"])
+        ffinfo["profile"] = get_profile(ffinfo)
+        ffinfo["fixed_filename"] = fix_filename(path)
+        ffinfo["aspect_ratio"] = get_aspect_ratio(ffinfo)
+        #
+        print(self.header_format.format(
+                *[ffinfo[k] for k in self.hdrs.keys()]))
 
 def get_stream_info(input_file, codec_type=None, verbose=False):
     """
@@ -11,38 +133,41 @@ def get_stream_info(input_file, codec_type=None, verbose=False):
     cmd = f"ffprobe -i {shlex.quote(input_file)} -v error -show_streams -of json"
     if verbose:
         print("COMMAND:", cmd)
-    p = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE, stdin=DEVNULL,
+    p = Popen(shlex.split(cmd), stdin=DEVNULL, stdout=PIPE, stderr=PIPE,
             universal_newlines=True)
     ff_result, err = p.communicate()
     if err:
         raise ValueError("ERROR:", err)
-    ff_info = json.loads(ff_result)
+    ffinfo = json.loads(ff_result)
     if verbose:
-        print("\n".join([ "{}={}".format(*a) for a in ff_info.items() ]))
+        print("\n".join([ "{}={}".format(*a) for a in ffinfo.items() ]))
     if codec_type is not None:
-        ff_info = [ x for x in ff_info["streams"]
+        ffinfo = [ x for x in ffinfo["streams"]
                    if x["codec_type"] == codec_type ]
-    if len(ff_info) == 0:
+    if len(ffinfo) == 0:
         print("ERROR: no stream info")
-    return ff_info
+    # put filename in each dict.
+    for x in ffinfo:
+        x["filename"] = input_file
+    return ffinfo
 
-def get_aspect_ratio(a, b):
-    return int(a/math.gcd(a,b)), int(b/math.gcd(a,b))
+def get_aspect_ratio(ffinfo):
+    ar = ffinfo.get("display_aspect_ratio")
+    if ar is None:
+        w = ffinfo["coded_width"]
+        h = ffinfo["coded_height"]
+        ar = ":".join([str(int(i/math.gcd(w, h))) for i in [w,h]])
+    return ar
 
-def progbar(a, b, width=60):
+def progress_bar(a, b, width=60):
     # "[" + "="*width + "]"
-    bar = "="*int(a/b*width)
-    sys.stdout.write("\r[{}] {:3}% {}/{}".format(bar.ljust(width),
-                                                 int(a/b*100), a,b))
+    if b != 0:
+        bar = "="*int(a/b*width)
+        sys.stdout.write("\r[{}] {:3}% {}/{}".format(bar.ljust(width),
+                                                    int(a/b*100), a, b))
+    else:
+        sys.stdout.write("\r[{}] {:3}% {}/{}".format("="*width, "???", a, b))
     if a == b:
         sys.stdout.write("\n")
     sys.stdout.flush()
 
-if __name__ == "__main__":
-    import time, random
-    a = 0
-    while a < 5000:
-        a += random.randint(10,200)
-        progbar(a,5000)
-        time.sleep(.1)
-    progbar(5000,5000)

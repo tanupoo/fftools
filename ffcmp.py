@@ -25,12 +25,9 @@ def get_common_keys(dict_list, shallow=True, ignore_keys=None):
             keys.insert(i,kv[0])
     return keys
 
-def show_dicts(*dicts, ignore_keys=None, only_diffs=False,
-               target=None):
+def show_dicts(*dicts, ignore_keys=None, only_diffs=False, target=None):
     """
-    a0, b0: a dict, not a list.
-        all key and value pairs must be formed like key : a value.
-        any value must not be a list or dict.
+    dicts: a list of dicts
     """
     if target is not None:
         if not isinstance(target, list):
@@ -44,7 +41,14 @@ def show_dicts(*dicts, ignore_keys=None, only_diffs=False,
         max_val_len.append(max([len(str(v))
                                 for k,v in dct.items()
                                 if k in keys ]))
-    # show table
+    # table header
+    print("{} D {}".format("Key Name".ljust(max_key_len),
+                           " ".join(["#V{:02}".format(i).ljust(max_val_len[i])
+                                     for i,dct in enumerate(dicts)])))
+    print("{} = {}".format("="*max_key_len,
+                           " ".join(["="*max_val_len[i]
+                                     for i,dct in enumerate(dicts)])))
+    # body
     for k in keys:
         line = [ f"{k.ljust(max_key_len)}" ]
         # adding Diff Flag.
@@ -70,9 +74,15 @@ def show_dicts(*dicts, ignore_keys=None, only_diffs=False,
                 line.append(' '.ljust(max_val_len[i]))
         #
         print(" ".join(line))
+    # table footer
+    print("{} = {}".format("="*max_key_len,
+                           " ".join(["="*max_val_len[i]
+                                     for i,dct in enumerate(dicts)])))
+    for i,dct in enumerate(dicts):
+        print("#V{:02}:{}".format(i,dct["filename"]))
 
 ap = argparse.ArgumentParser(
-        description="this is example.",
+        description="compare the parameters of video files.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 ap.add_argument("input_file", nargs="+", help="movie file.")
 ap.add_argument("-t", action="store", dest="_target",
@@ -85,10 +95,12 @@ opt = ap.parse_args()
 opt.target = None
 if opt._target is not None:
     opt.target = [int(i) for i in opt._target.split(",")]
+if opt.verbose:
+    codec_ignore_keys = []
+else:
+    codec_ignore_keys = ["codec_long_name"]
 
-show_dicts(*[ get_stream_info(f,
-                              codec_type="video",
-                              verbose=opt.verbose)[0]
+show_dicts(*[ get_stream_info(f, codec_type="video", verbose=opt.verbose)[0]
              for f in opt.input_file ],
-           ignore_keys=["codec_long_name"],
+           ignore_keys=codec_ignore_keys,
            target=opt.target)

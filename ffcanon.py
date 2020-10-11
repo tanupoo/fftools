@@ -7,36 +7,27 @@ import shlex
 import os
 import json
 import math
-from fftools import *
+from fftools import get_stream_info, ffPrintInfo, progress_bar
 import re
 import glob
 
 def do_main(input_file, quoted=False):
-    ff_info = get_stream_info(input_file, codec_type="video",
-                              verbose=opt.verbose)
-    info_v = ff_info[0] # "video"
-    #
-    info_v["width"] = int(info_v["width"])
-    info_v["height"] = int(info_v["height"])
-    info_v["bit_rate"] = int(info_v["bit_rate"])
-    info_v["nb_frames"] = int(info_v["nb_frames"])
+    ffinfo = get_stream_info(input_file, codec_type="video",
+                              verbose=opt.verbose)[0]
     #
     print(f"## video stream profile: {input_file}")
-    print("size: {} x {}".format(info_v["width"], info_v["height"]))
-    print("aspect: {}:{}".format(
-        *get_aspect_ratio(info_v["width"], info_v["height"])))
-    print("profile:", info_v["profile"])
-    print("level:", info_v["level"])
-    print("bitrate: {} kb/s".format(int(info_v["bit_rate"]/1000)))
-    #
-    if info_v["width"] < 1920 and not opt.force:
-        print("no need to resize.")
-        return
-
+    ffprint = ffPrintInfo(print_mode=1, verbose=opt.verbose)
+    ffprint.print_header()
+    ffprint.print_info(input_file, ffinfo)
     if opt.show_profile:
         return
-
-    ##
+    #
+    if ffinfo["width"] < 1920 and not opt.force:
+        print("no need to resize.")
+        return
+    #
+    nb_frames = int(ffinfo.get("nb_frames","0"))
+    #
     if opt.output_file is None:
         bname, prefix = os.path.splitext(input_file)
         bname = unicodedata.normalize("NFC", bname)
@@ -55,7 +46,7 @@ def do_main(input_file, quoted=False):
     if opt.profile_level is not None:
         opts.append(f"-level:v {opt.profile_level}")
     else:
-        opts.append("-level:v {}".format(info_v["level"]))
+        opts.append("-level:v {}".format(ffinfo["level"]))
     #
     vf_opt = []
     if opt.scale is not None:
@@ -77,7 +68,7 @@ def do_main(input_file, quoted=False):
         f"{opts} "
         f"{shlex.quote(output_file)}")
     print("===>", cmd)
-    p = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE, stdin=DEVNULL,
+    p = Popen(shlex.split(cmd), stdin=DEVNULL, stdout=PIPE, stderr=PIPE,
             universal_newlines=True
             )
 
@@ -88,7 +79,7 @@ def do_main(input_file, quoted=False):
         # frame=  671 fps= 19 q=-1.0 Lsize=   63844kB time=00:06:01.49 bitrate=1446.8kbits/s dup=380 drop=387 speed=0.324x    
         r = re.search("frame=\s*(\d+) .*", buf)
         if r:
-            progbar(int(r.group(1)), info_v["nb_frames"])
+            progress_bar(int(r.group(1)), nb_frames)
 
     p.wait()
 
@@ -97,7 +88,7 @@ def do_main(input_file, quoted=False):
 #
 import argparse
 ap = argparse.ArgumentParser(
-        description="this is example.",
+        description="convert video file.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 ap.add_argument("input_file", nargs="+", help="a movie file.")
 ap.add_argument("--output", action="store", dest="output_file",
@@ -133,7 +124,6 @@ if opt.input_file == ["-"]:
     for f in sys.stdin:
         do_main(f.strip())
 else:
-    print(opt.input_file)
     for f in opt.input_file:
         do_main(f.strip())
 
