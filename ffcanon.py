@@ -127,7 +127,7 @@ ap.add_argument("--output", action="store", dest="output_file",
 ap.add_argument("--level", action="store", dest="profile_level",
                 help="specify the profile level.")
 ap.add_argument("--scale", action="store", dest="scale",
-                type=int, default=_DEFAULT_SCALE,
+                type=int,
                 help="specify the scale.")
 ap.add_argument("--rotate", action="store", dest="rotate",
                 default=None, choices=["right", "r", "left", "l"],
