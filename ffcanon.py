@@ -62,6 +62,13 @@ def do_main(input_file, quoted=False):
             # just ignore it.
             pass
     opts.append("-vf " + ",".join(vf_opt))
+    # ripping
+    if opt.time_start:
+        opts.append(f"-ss {opt.time_start}")
+    if opt.time_end:
+        opts.append(f"-to {opt.time_end}")
+    if opt.time_duration:
+        opts.append(f"-to {opt.time_duration}")
     opts = " ".join(opts)
 
     cmd = (f"ffmpeg -i {shlex.quote(input_file)} "
@@ -101,11 +108,11 @@ ap.add_argument("--scale", action="store", dest="scale",
 ap.add_argument("--rotate", action="store", dest="rotate",
                 default=None, choices=["right", "r", "left", "l"],
                 help="specify the direction of 90 rotation.")
-ap.add_argument("--time-start", action="store", dest="start_time",
+ap.add_argument("--time-start", action="store", dest="time_start",
                 help="pass the value to ffmpeg the -ss option.")
-ap.add_argument("--time-end", action="store", dest="end_time",
+ap.add_argument("--time-end", action="store", dest="time_end",
                 help="pass the value to ffmpeg the -to option.")
-ap.add_argument("--time-duration", action="store", dest="end_time",
+ap.add_argument("--time-duration", action="store", dest="time_duration",
                 help="pass the value to ffmpeg the -t option.")
 ap.add_argument("-an", action="store_true", dest="no_audio",
                 help="remove audio..")
