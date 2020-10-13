@@ -96,9 +96,9 @@ opt.target = None
 if opt._target is not None:
     opt.target = [int(i) for i in opt._target.split(",")]
 if opt.verbose:
-    codec_ignore_keys = []
+    codec_ignore_keys = ["filename"]
 else:
-    codec_ignore_keys = ["codec_long_name"]
+    codec_ignore_keys = ["filename", "codec_long_name"]
 
 show_dicts(*[ get_stream_info(f, codec_type="video", verbose=opt.verbose)[0]
              for f in opt.input_file ],
