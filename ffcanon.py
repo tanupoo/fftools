@@ -11,6 +11,8 @@ from fftools import get_stream_info, ffPrintInfo, progress_bar, parse_time
 import re
 import glob
 
+_DEFAULT_SCALE = 1280
+
 def do_main(input_file, quoted=False):
     ffinfo = get_stream_info(input_file, codec_type="video",
                               verbose=opt.verbose)[0]
@@ -49,10 +51,14 @@ def do_main(input_file, quoted=False):
         opts.append("-level:v {}".format(ffinfo["level"]))
     #
     vf_opt = []
+    # scale
     if opt.scale is not None:
         vf_opt.append(f"scale={opt.scale}:-1")
     else:
-        vf_opt.append("scale=1280:-1")
+        # only convert the scale if current scale is more than DEFAULT_SCALE.
+        if ffinfo["width"] > _DEFAULT_SCALE:
+            vf_opt.append(f"scale={_DEFAULT_SCALE}:-1")
+    # rotation
     if opt.rotate is not None:
         if opt.rotate.lower() in ["r", "right"]:
             vf_opt.append("transpose=1")
@@ -121,7 +127,7 @@ ap.add_argument("--output", action="store", dest="output_file",
 ap.add_argument("--level", action="store", dest="profile_level",
                 help="specify the profile level.")
 ap.add_argument("--scale", action="store", dest="scale",
-                type=int, default=1280,
+                type=int, default=_DEFAULT_SCALE,
                 help="specify the scale.")
 ap.add_argument("--rotate", action="store", dest="rotate",
                 default=None, choices=["right", "r", "left", "l"],
