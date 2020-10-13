@@ -84,6 +84,8 @@ def do_main(input_file, quoted=False):
         if not buf:
             break
         # frame=  671 fps= 19 q=-1.0 Lsize=   63844kB time=00:06:01.49 bitrate=1446.8kbits/s dup=380 drop=387 speed=0.324x    
+        if opt.verbose:
+            print(buf, flush=True)
         r = re.search("frame=\s*(\d+) .*", buf)
         if r:
             progress_bar(int(r.group(1)), nb_frames)
