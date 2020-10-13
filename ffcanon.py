@@ -49,16 +49,16 @@ def do_main(input_file, quoted=False):
         opts.append(f"-level:v {opt.profile_level}")
     else:
         opts.append("-level:v {}".format(ffinfo["level"]))
-    #
+    # -vf option
     vf_opt = []
-    # scale
+    # -vf: scale
     if opt.scale is not None:
         vf_opt.append(f"scale={opt.scale}:-1")
     else:
         # only convert the scale if current scale is more than DEFAULT_SCALE.
         if ffinfo["width"] > _DEFAULT_SCALE:
             vf_opt.append(f"scale={_DEFAULT_SCALE}:-1")
-    # rotation
+    # -vf: rotation
     if opt.rotate is not None:
         if opt.rotate.lower() in ["r", "right"]:
             vf_opt.append("transpose=1")
@@ -67,7 +67,8 @@ def do_main(input_file, quoted=False):
         else:
             # just ignore it.
             pass
-    opts.append("-vf " + ",".join(vf_opt))
+    if len(vf_opt):
+        opts.append("-vf " + ",".join(vf_opt))
     # set ripping duration.
     # and, get parameters for progress bar.
     if (opt.time_start is None and opt.time_end is None and
