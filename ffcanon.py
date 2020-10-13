@@ -7,7 +7,7 @@ import shlex
 import os
 import json
 import math
-from fftools import get_stream_info, ffPrintInfo, progress_bar
+from fftools import get_stream_info, ffPrintInfo, progress_bar, parse_time
 import re
 import glob
 
@@ -62,13 +62,28 @@ def do_main(input_file, quoted=False):
             # just ignore it.
             pass
     opts.append("-vf " + ",".join(vf_opt))
-    # ripping
-    if opt.time_start:
-        opts.append(f"-ss {opt.time_start}")
-    if opt.time_end:
-        opts.append(f"-to {opt.time_end}")
-    if opt.time_duration:
-        opts.append(f"-to {opt.time_duration}")
+    # set ripping duration.
+    # and, get parameters for progress bar.
+    if (opt.time_start is None and opt.time_end is None and
+        opt.time_duration is None):
+        total_dur = get_duration(ffinfo)
+    else:
+        if opt.time_start:
+            opts.append(f"-ss {opt.time_start}")
+            time_start = parse_time(opt.time_start)
+        else:
+            time_start = 0
+        #
+        if opt.time_duration:
+            # ignore even if --time-end is specified.
+            opts.append(f"-t {opt.time_duration}")
+            total_dur = time_start + parse_time(opt.time_duration)
+        elif opt.time_end:
+            opts.append(f"-to {opt.time_end}")
+            total_dur = parse_time(opt.time_end) - time_start
+        else:
+            total_dur = get_duration(ffinfo) - time_start
+    #
     opts = " ".join(opts)
 
     cmd = (f"ffmpeg -i {shlex.quote(input_file)} "
@@ -87,9 +102,9 @@ def do_main(input_file, quoted=False):
         if opt.verbose:
             print(buf, end="", flush=True)
         else:
-            r = re.search("frame=\s*(\d+) .*", buf)
+            r = re.search(r"time=(\d+:\d+:\d+\.\d+) .*", buf)
             if r:
-                progress_bar(int(r.group(1)), nb_frames)
+                progress_bar(parse_time(r.group(1)), total_dur)
 
     p.wait()
 

@@ -55,22 +55,6 @@ class ffPrintInfo():
         """
         ffinfo: output of get_stream_info()
         """
-        # make duration
-        def get_duration(ffinfo):
-            duration = ffinfo.get("duration")
-            if duration is not None:
-                try:
-                    duration = float(duration)
-                except Exception as e:
-                    return 0
-                else:
-                    return duration
-            # e.g. 00:03:20.720000000
-            d = "00:00:00.000000000"
-            str_dur = ffinfo.get("tags",{"DURATION":d}).get("DURATION",d)
-            return sum([p*q for p,q in
-                        zip([float(i) for i in str_dur.split(":")],
-                            [3600,60,1])])
         def str_duration(duration):
             str_dur = str(timedelta(seconds=duration)).rjust(15,"0")
             if self.print_mode == 2:
@@ -126,6 +110,27 @@ class ffPrintInfo():
         print(self.header_format.format(
                 *[ffinfo[k] for k in self.hdrs.keys()]))
 
+def get_duration(ffinfo):
+    """
+    ffinfo: json of ffprobe output.
+    return the duration of the stream in seconds.
+    mkv doesn't have duration, but does tags:DURATION.
+    """
+    duration = ffinfo.get("duration")
+    if duration is not None:
+        try:
+            duration = float(duration)
+        except Exception as e:
+            return 0
+        else:
+            return duration
+    # e.g. 00:03:20.720000000
+    d = "00:00:00.000000000"
+    str_dur = ffinfo.get("tags",{"DURATION":d}).get("DURATION",d)
+    return sum([p*q for p,q in
+                zip([float(i) for i in str_dur.split(":")],
+                    [3600,60,1])])
+
 def get_stream_info(input_file, codec_type=None, verbose=False):
     """
     codec_type: video, audio, or None
@@ -159,14 +164,29 @@ def get_aspect_ratio(ffinfo):
         ar = ":".join([str(int(i/math.gcd(w, h))) for i in [w,h]])
     return ar
 
-def progress_bar(a, b, width=60):
+def parse_time(src):
+    """
+    convert time-like string into a float number in second.
+    return the number.
+    """
+    if src.find(".") > 0:
+        s_hms, s_dec = src.split(".")
+        n_dec = float(f".{s_dec.ljust(6,'0')}")
+    else:
+        s_hms = src
+        n_dec = 0.
+    s = s_hms.replace(":","").rjust(6,"0")
+    return sum([a*b for a,b in zip(
+            [int(s[i:i+2]) for i in range(0,6,2)],
+            [3600,60,1])]) + n_dec
+
+def progress_bar(a, b, width=70):
     # "[" + "="*width + "]"
     if b != 0:
         bar = "="*int(a/b*width)
-        sys.stdout.write("\r[{}] {:3}% {}/{}".format(bar.ljust(width),
-                                                    int(a/b*100), a, b))
+        sys.stdout.write("\r[{}] {:3}%".format(bar.ljust(width), int(a/b*100)))
     else:
-        sys.stdout.write("\r[{}] {:3}% {}/{}".format("="*width, "???", a, b))
+        sys.stdout.write("\r[{}] {:3}%".format("="*width, "???"))
     if a == b:
         sys.stdout.write("\n")
     sys.stdout.flush()
