@@ -7,7 +7,8 @@ import shlex
 import os
 import json
 import math
-from fftools import get_stream_info, ffPrintInfo, progress_bar, parse_time
+from fftools import (get_stream_info, get_duration,
+                     ffPrintInfo, progress_bar, parse_time)
 import re
 import glob
 
