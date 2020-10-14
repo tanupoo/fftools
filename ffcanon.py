@@ -5,12 +5,10 @@ import unicodedata
 from subprocess import Popen, PIPE, DEVNULL
 import shlex
 import os
-import json
-import math
 from fftools import (get_stream_info, get_duration,
                      ffPrintInfo, progress_bar, parse_time)
 import re
-import glob
+from datetime import timedelta
 
 _DEFAULT_SCALE = 1280
 
@@ -98,6 +96,7 @@ def do_main(input_file, quoted=False):
         f"{opts} "
         f"{shlex.quote(output_file)}")
     print("===>", cmd)
+    print("Duration:", str(timedelta(seconds=total_dur)))
     p = Popen(shlex.split(cmd), stdin=DEVNULL, stdout=PIPE, stderr=PIPE,
             universal_newlines=True
             )
