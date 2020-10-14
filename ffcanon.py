@@ -105,6 +105,9 @@ def do_main(input_file, quoted=False):
         buf = p.stderr.readline()
         if not buf:
             break
+        if "Not overwriting" in buf:
+            print("ERROR: output filename has exsted.")
+            break
         # frame=  671 fps= 19 q=-1.0 Lsize=   63844kB time=00:06:01.49 bitrate=1446.8kbits/s dup=380 drop=387 speed=0.324x    
         if opt.verbose:
             print(buf, end="", flush=True)
