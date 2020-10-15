@@ -24,6 +24,7 @@ class ffPrintInfo():
             self.hdrs = {
                     "str_duration": "Duration",
                     "str_bit_rate": "Bitrate ",
+                    "r_frame_rate": "fps  ",
                     "coded_width": "W   ",
                     "coded_height": "H   ",
                     "fixed_filename": "Filename ",
@@ -32,6 +33,7 @@ class ffPrintInfo():
             self.hdrs = {
                     "str_duration": "Duration       ",
                     "str_bit_rate": "Bitrate ",
+                    "r_frame_rate": "fps  ",
                     "coded_width": "W   ",
                     "coded_height": "H   ",
                     "aspect_ratio": "Aspect R.",
