@@ -61,13 +61,20 @@ ap.add_argument("-p", action="store_true", dest="show_pattern",
 ap.add_argument("--no-newline", action="store_false", dest="add_newline",
                 help="disable to add a new line before a key frame.")
 ap.add_argument("--frames", action="store", dest="max_frames",
-                type=int, default=100000,
+                type=int,
                 help="specify max frames to be read.")
 ap.add_argument("-n", action="store_false", dest="show_stat",
                 help="disable to show stat.")
 ap.add_argument("-v", action="store_true", dest="verbose",
                 help="verbose mode.")
 opt = ap.parse_args()
+
+# set default frames to be read.
+if opt.max_frames is None:
+    if opt.show_pattern:
+        opt.max_frames = 300
+    else:
+        opt.max_frames = 10000
 
 frames = get_frames(opt)
 
@@ -82,15 +89,17 @@ if opt.show_pattern:
         else:
             return x["pict_type"]
     #
+    print("Size Pattern")
+    print("==== =======")
     if opt.add_newline:
         nl = "\n"
     else:
         nl = ""
-    sys.stdout.write(tosymbol(frames[0]))
+    patt = [ tosymbol(frames[0]) ]
     for x in frames[1:]:
         if x["key_frame"] == "1":
-            sys.stdout.write(nl)
-        sys.stdout.write(tosymbol(x))
+            sys.stdout.write("{:4} {}{}".format(len(patt),"".join(patt),nl))
+        patt.append(tosymbol(x))
     print()
 
 if opt.show_stat:
