@@ -6,8 +6,8 @@ import shlex
 import argparse
 
 def get_frames(opt):
-    base_cmd = "ffprobe -v error -of compact -select_streams v -show_frames -i"
-    cmd = f"{base_cmd} {opt.input_file}"
+    cmd = ("ffprobe -v error -of compact -select_streams v -show_frames "
+           f"-i {shlex.quote(opt.input_file)}")
     if opt.verbose:
         print("CMD==>", cmd)
     #
@@ -45,7 +45,7 @@ def get_frames(opt):
             break
 
     if p.poll():
-        print(f"ERROR: {p.stderr.read().decode()}")
+        print(f"ERROR: {p.stderr.read()}")
 
     return frames
 
@@ -61,7 +61,7 @@ ap.add_argument("-p", action="store_true", dest="show_pattern",
 ap.add_argument("--no-newline", action="store_false", dest="add_newline",
                 help="disable to add a new line before a key frame.")
 ap.add_argument("--frames", action="store", dest="max_frames",
-                type=int, default=200000,
+                type=int, default=100000,
                 help="specify max frames to be read.")
 ap.add_argument("-n", action="store_false", dest="show_stat",
                 help="disable to show stat.")
