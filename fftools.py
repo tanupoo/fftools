@@ -24,7 +24,7 @@ class ffPrintInfo():
             self.hdrs = {
                     "str_duration": "Duration",
                     "str_bit_rate": "Bitrate ",
-                    "r_frame_rate": "fps  ",
+                    "fps": "fps  ",
                     "coded_width": "W   ",
                     "coded_height": "H   ",
                     "fixed_filename": "Filename ",
@@ -33,7 +33,7 @@ class ffPrintInfo():
             self.hdrs = {
                     "str_duration": "Duration       ",
                     "str_bit_rate": "Bitrate ",
-                    "r_frame_rate": "fps  ",
+                    "fps": "fps  ",
                     "coded_width": "W   ",
                     "coded_height": "H   ",
                     "aspect_ratio": "Aspect R.",
@@ -96,6 +96,19 @@ class ffPrintInfo():
                 name_len = (get_terminal_size((80,0)).columns -
                             self.left_cols_len - 1)
                 return os.path.basename(path)[:name_len]
+        # fix framerate
+        def fix_framerate(str_fps):
+            if str_fps.find("/") > -1:
+                a = [int(i) for i in str_fps.split("/")]
+                return round(a[0]/a[1],2)
+            else:
+                try:
+                    a = float(str_fps)
+                except ValueError:
+                    print(f"ERROR: {str_fps} is not a float.", file=strerr)
+                    return 0.
+                else:
+                    return round(a)
         #
         # set info
         #
@@ -105,6 +118,7 @@ class ffPrintInfo():
         # fileseize and duration must be set before bit_rate is set.
         ffinfo["bit_rate"] = get_bitrate(ffinfo)
         ffinfo["str_bit_rate"] = str_bitrate(ffinfo["bit_rate"])
+        ffinfo["fps"] = fix_framerate(ffinfo["r_frame_rate"])
         ffinfo["profile"] = get_profile(ffinfo)
         ffinfo["fixed_filename"] = fix_filename(path)
         ffinfo["aspect_ratio"] = get_aspect_ratio(ffinfo)
