@@ -1,53 +1,8 @@
 #!/usr/bin/env python
 
 import sys
-from subprocess import Popen, PIPE, DEVNULL
-import shlex
+from fftools import get_frames
 import argparse
-
-def get_frames(opt):
-    cmd = ("ffprobe -v error -of compact -select_streams v -show_frames "
-           f"-i {shlex.quote(opt.input_file)}")
-    if opt.verbose:
-        print("CMD==>", cmd)
-    #
-    frames = []
-    """
-    key_list = [
-        "media_type", "stream_index", "key_frame",
-        "pkt_pts", "pkt_pts_time", "pkt_dts", "pkt_dts_time",
-        "best_effort_timestamp", "best_effort_timestamp_time",
-        "pkt_duration", "pkt_duration_time", "pkt_pos",
-        "pkt_size", "width", "height", "pix_fmt",
-        "sample_aspect_ratio", "pict_type", "coded_picture_number",
-        "display_picture_number", "interlaced_frame", "top_field_first",
-        "repeat_pict", "color_range", "color_space", "color_primaries",
-        "color_transfer", "chroma_location",
-        ]
-    """
-    p = Popen(shlex.split(cmd), stdin=DEVNULL, stdout=PIPE, stderr=PIPE,
-              universal_newlines=True)
-    nb_lines = 1
-    while p.poll() is None:
-        cols = p.stdout.readline().strip().split("|")
-        if opt.verbose:
-            print("COL:", cols)
-        if cols[0] != "frame":
-            # it's not a frame info, just to be ignored.
-            continue
-        if len(cols) != 29:
-            print("WARNING: len != 29:", cols, file=sys.stderr)
-            continue
-        frames.append(dict(x.split("=") for x in cols[1:]))
-        # another condition to break
-        nb_lines += 1
-        if opt.max_frames and nb_lines > opt.max_frames:
-            break
-
-    if p.poll():
-        print(f"ERROR: {p.stderr.read()}")
-
-    return frames
 
 #
 # main
@@ -76,7 +31,9 @@ if opt.max_frames is None:
     else:
         opt.max_frames = 10000
 
-frames = get_frames(opt)
+frames = get_frames(opt.input_file, max_frames=opt.max_frames,
+                    entries=["key_frame", "pict_type", "pkt_pts_time"],
+                    verbose=opt.verbose)
 
 if opt.show_pattern:
     def tosymbol(x):

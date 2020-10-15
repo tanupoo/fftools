@@ -164,6 +164,49 @@ def get_aspect_ratio(ffinfo):
         ar = ":".join([str(int(i/math.gcd(w, h))) for i in [w,h]])
     return ar
 
+def get_frames(input_file, max_frames=0, entries=[], verbose=False):
+    """
+    entries:
+        "media_type", "stream_index", "key_frame",
+        "pkt_pts", "pkt_pts_time", "pkt_dts", "pkt_dts_time",
+        "best_effort_timestamp", "best_effort_timestamp_time",
+        "pkt_duration", "pkt_duration_time", "pkt_pos",
+        "pkt_size", "width", "height", "pix_fmt",
+        "sample_aspect_ratio", "pict_type", "coded_picture_number",
+        "display_picture_number", "interlaced_frame", "top_field_first",
+        "repeat_pict", "color_range", "color_space", "color_primaries",
+        "color_transfer", "chroma_location",
+    """
+    opts = ["-v error -of compact -select_streams v -show_frames"]
+    if entries:
+        opts.append("-show_entries frame={}".format(",".join(entries)))
+    opts.append(f"-i {shlex.quote(input_file)}")
+    cmd = "ffprobe {}".format(" ".join(opts))
+    if verbose:
+        print("CMD==>", cmd)
+    #
+    frames = []
+    p = Popen(shlex.split(cmd), stdin=DEVNULL, stdout=PIPE, stderr=PIPE,
+              universal_newlines=True)
+    nb_lines = 1
+    while p.poll() is None:
+        cols = p.stdout.readline().strip().split("|")
+        if verbose:
+            print("COL:", cols)
+        if cols[0] != "frame":
+            # it's not a frame info, just to be ignored.
+            continue
+        frames.append(dict(x.split("=") for x in cols[1:]))
+        # another condition to break
+        nb_lines += 1
+        if max_frames and nb_lines > max_frames:
+            break
+
+    if p.poll():
+        print(f"ERROR: {p.stderr.read()}")
+
+    return frames
+
 def parse_time(src):
     """
     convert time-like string into a float number in second.
