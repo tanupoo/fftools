@@ -136,11 +136,14 @@ ap.add_argument("--scale", action="store", dest="scale",
 ap.add_argument("--rotate", action="store", dest="rotate",
                 default=None, choices=["right", "r", "left", "l"],
                 help="specify the direction of 90 rotation.")
-ap.add_argument("--time-start", action="store", dest="time_start",
+ap.add_argument("-st", "--time-start", "--start-time",
+                action="store", dest="time_start",
                 help="pass the value to ffmpeg the -ss option.")
-ap.add_argument("--time-end", action="store", dest="time_end",
+ap.add_argument("-et", "--time-end", "--end-time",
+                action="store", dest="time_end",
                 help="pass the value to ffmpeg the -to option.")
-ap.add_argument("--time-duration", action="store", dest="time_duration",
+ap.add_argument("-dt", "--time-duration",
+                action="store", dest="time_duration",
                 help="pass the value to ffmpeg the -t option.")
 ap.add_argument("-an", action="store_true", dest="no_audio",
                 help="remove audio..")
