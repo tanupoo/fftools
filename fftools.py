@@ -53,41 +53,10 @@ class ffPrintInfo():
         print(self.header_format.format(*self.hdrs.values()))
         print(self.hdr_sep)
 
-    def print_info(self, path, ffinfo):
+    def print_info(self, ffinfo):
         """
         ffinfo: output of get_stream_info()
         """
-        def str_duration(duration):
-            str_dur = str(timedelta(seconds=duration)).rjust(15,"0")
-            if self.print_mode == 2:
-                return str_dur[:15]
-            else:
-                return str_dur[:8]
-        # get bit rate.
-        def get_bitrate(ffinfo):
-            """
-            bps
-            """
-            br = ffinfo.get("bit_rate")
-            if br is not None:
-                return float(br)
-            return ffinfo["filesize"]*8000000 / ffinfo["duration"]
-        def str_bitrate(bitrate):
-            """
-            kbps
-            """
-            a, b = str(bitrate/1000).split(".")
-            return "{}.{}".format(a.rjust(4," "), b[:3].ljust(3,"0"))
-        # make profile name
-        def get_profile(ffinfo):
-            profile_map = {
-                    "Constrained Baseline": "CBase",
-                    "Baseline": "Base",
-                    "Extended": "Ext",
-                    "Multiview High": "MHigh",
-                    "Stereo High": "SHigh",
-                    }
-            return profile_map.get(ffinfo["profile"], ffinfo["profile"])
         # fix filename
         def fix_filename(path):
             if self.print_mode == 2:
@@ -96,33 +65,21 @@ class ffPrintInfo():
                 name_len = (get_terminal_size((80,0)).columns -
                             self.left_cols_len - 1)
                 return os.path.basename(path)[:name_len]
-        # fix framerate
-        def fix_framerate(str_fps):
-            if str_fps.find("/") > -1:
-                a = [int(i) for i in str_fps.split("/")]
-                return round(a[0]/a[1],2)
+        def str_duration(duration):
+            str_dur = str(timedelta(seconds=duration)).rjust(15,"0")
+            if self.print_mode == 2:
+                return str_dur[:15]
             else:
-                try:
-                    a = float(str_fps)
-                except ValueError:
-                    print(f"ERROR: {str_fps} is not a float.", file=strerr)
-                    return 0.
-                else:
-                    return round(a)
-        #
-        # set info
-        #
-        ffinfo["filesize"] = os.stat(path).st_size / 1000000  # MB
-        ffinfo["duration"] = get_duration(ffinfo)
-        ffinfo["str_duration"] = str_duration(ffinfo["duration"])
-        # fileseize and duration must be set before bit_rate is set.
-        ffinfo["bit_rate"] = get_bitrate(ffinfo)
+                return str_dur[:8]
+        def str_bitrate(bitrate):
+            """
+            kbps
+            """
+            a, b = str(bitrate/1000).split(".")
+            return "{}.{}".format(a.rjust(4," "), b[:3].ljust(3,"0"))
         ffinfo["str_bit_rate"] = str_bitrate(ffinfo["bit_rate"])
-        ffinfo["fps"] = fix_framerate(ffinfo["r_frame_rate"])
-        ffinfo["profile"] = get_profile(ffinfo)
-        ffinfo["fixed_filename"] = fix_filename(path)
-        ffinfo["aspect_ratio"] = get_aspect_ratio(ffinfo)
-        #
+        ffinfo["str_duration"] = str_duration(ffinfo["duration"])
+        ffinfo["fixed_filename"] = fix_filename(ffinfo["path"])
         print(self.header_format.format(
                 *[ffinfo[k] for k in self.hdrs.keys()]))
 
@@ -151,6 +108,44 @@ def get_stream_info(input_file, codec_type=None, verbose=False):
     """
     codec_type: video, audio, or None
     """
+    #
+    # functions to fix some parameters
+    #
+    # get bit rate.
+    def get_bitrate(ffinfo):
+        """
+        bps
+        """
+        br = ffinfo.get("bit_rate")
+        if br is not None:
+            return float(br)
+        return ffinfo["filesize"]*8000000 / ffinfo["duration"]
+    # make profile name
+    def get_profile(ffinfo):
+        profile_map = {
+                "Constrained Baseline": "CBase",
+                "Baseline": "Base",
+                "Extended": "Ext",
+                "Multiview High": "MHigh",
+                "Stereo High": "SHigh",
+                }
+        return profile_map.get(ffinfo["profile"], ffinfo["profile"])
+    # fix framerate
+    def fix_framerate(str_fps):
+        if str_fps.find("/") > -1:
+            a = [int(i) for i in str_fps.split("/")]
+            return round(a[0]/a[1],2)
+        else:
+            try:
+                a = float(str_fps)
+            except ValueError:
+                print(f"ERROR: {str_fps} is not a float.", file=strerr)
+                return 0.
+            else:
+                return round(a)
+    #
+    # END: functions to fix some parameters
+    #
     cmd = f"ffprobe -i {shlex.quote(input_file)} -v error -show_streams -of json"
     if verbose:
         print("COMMAND:", cmd)
@@ -167,9 +162,21 @@ def get_stream_info(input_file, codec_type=None, verbose=False):
                    if x["codec_type"] == codec_type ]
     if len(ffinfo) == 0:
         print("ERROR: no stream info")
-    # put filename in each dict.
+    # put input_file into "path" in each dict.
     for x in ffinfo:
-        x["filename"] = input_file
+        x["path"] = input_file
+    # set info
+    #
+    # XXX
+    x = ffinfo[0]
+    x["filesize"] = os.stat(input_file).st_size / 1000000  # MB
+    x["duration"] = get_duration(x)
+    # fileseize and duration must be set before bit_rate is set.
+    x["bit_rate"] = get_bitrate(x)
+    x["fps"] = fix_framerate(x["r_frame_rate"])
+    x["profile"] = get_profile(x)
+    x["aspect_ratio"] = get_aspect_ratio(x)
+    #
     return ffinfo
 
 def get_aspect_ratio(ffinfo):
