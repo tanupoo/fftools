@@ -19,7 +19,7 @@ def do_main(input_file, quoted=False):
     print(f"## video stream profile: {input_file}")
     ffprint = ffPrintInfo(print_mode=1, verbose=opt.verbose)
     ffprint.print_header()
-    ffprint.print_info(input_file, ffinfo)
+    ffprint.print_info(ffinfo)
     if opt.show_profile:
         return
     #
@@ -156,6 +156,12 @@ ap.add_argument("-p", action="store_true", dest="show_profile",
 ap.add_argument("-v", action="store_true", dest="verbose",
                 help="verbose mode.")
 opt = ap.parse_args()
+
+# force ?
+if set([opt.rotate, opt.scale, opt.time_start, opt.time_end, opt.time_duration,
+        opt.no_audio, opt.profile_level]) != {False, None}:
+    opt.force = True
+    print("NOTE: set opt.force.")
 
 ##
 if opt.input_file == ["-"]:
