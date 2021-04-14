@@ -52,11 +52,11 @@ def do_main(input_file, quoted=False):
     vf_opt = []
     # -vf: scale
     if opt.scale is not None:
-        vf_opt.append(f"scale={opt.scale}:-1")
+        vf_opt.append(f"scale={opt.scale}:-2")
     else:
         # only convert the scale if current scale is more than DEFAULT_SCALE.
         if ffinfo["width"] > _DEFAULT_SCALE:
-            vf_opt.append(f"scale={_DEFAULT_SCALE}:-1")
+            vf_opt.append(f"scale={_DEFAULT_SCALE}:-2")
     # -vf: rotation
     if opt.rotate is not None:
         if opt.rotate.lower() in ["r", "right"]:
@@ -132,7 +132,7 @@ ap.add_argument("--level", action="store", dest="profile_level",
                 help="specify the profile level.")
 ap.add_argument("--scale", action="store", dest="scale",
                 type=int,
-                help="specify the scale.")
+                help="specify the size of x for scale. e.g. --scale 1280")
 ap.add_argument("--rotate", action="store", dest="rotate",
                 default=None, choices=["right", "r", "left", "l"],
                 help="specify the direction of 90 rotation.")
