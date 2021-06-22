@@ -43,11 +43,14 @@ def do_main(input_file, quoted=False):
     if opt.no_audio:
         opts.append("-an")
     #
-    opts.append("-profile:v high")
-    if opt.profile_level is not None:
-        opts.append(f"-level:v {opt.profile_level}")
+    if opt.copy_bitrate:
+        opts.append("-b:v {}".format(ffinfo["bit_rate"]))
     else:
-        opts.append("-level:v {}".format(ffinfo["level"]))
+        opts.append("-profile:v high")
+        if opt.profile_level is not None:
+            opts.append(f"-level:v {opt.profile_level}")
+        else:
+            opts.append("-level:v {}".format(ffinfo["level"]))
     # -vf option
     vf_opt = []
     # -vf: scale
@@ -149,6 +152,9 @@ ap.add_argument("-an", action="store_true", dest="no_audio",
                 help="remove audio..")
 ap.add_argument("-f", action="store_true", dest="force",
                 help="force to convert the file.")
+ap.add_argument("-R", action="store_false", dest="copy_bitrate",
+                help="inform not to use original bitrate. "
+                    "instead, use profile:high")
 ap.add_argument("-y", action="store_true", dest="overwrite",
                 help="overwrite the output file.")
 ap.add_argument("-p", action="store_true", dest="show_profile",
