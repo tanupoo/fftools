@@ -35,7 +35,7 @@ def print_info(path):
             print(f"{path}", flush=True)
             return
         #
-        ffprint.print_info(path, ffinfo)
+        ffprint.print_info(ffinfo)
 
 def walk_path(path, recursive=False):
     if opt.verbose:
