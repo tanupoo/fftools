@@ -43,14 +43,17 @@ def do_main(input_file, quoted=False):
     if opt.no_audio:
         opts.append("-an")
     #
-    if opt.copy_bitrate:
-        opts.append("-b:v {}".format(ffinfo["bit_rate"]))
+    if opt.copy_codec:
+        opts.append("-c:v copy")
     else:
-        opts.append("-profile:v high")
-        if opt.profile_level is not None:
-            opts.append(f"-level:v {opt.profile_level}")
+        if opt.copy_bitrate:
+            opts.append("-b:v {}".format(ffinfo["bit_rate"]))
         else:
-            opts.append("-level:v {}".format(ffinfo["level"]))
+            opts.append("-profile:v high")
+            if opt.profile_level is not None:
+                opts.append(f"-level:v {opt.profile_level}")
+            else:
+                opts.append("-level:v {}".format(ffinfo["level"]))
     # -vf option
     vf_opt = []
     # -vf: scale
@@ -129,8 +132,10 @@ ap = argparse.ArgumentParser(
         description="convert video file.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 ap.add_argument("input_file", nargs="+", help="a movie file.")
-ap.add_argument("--output", action="store", dest="output_file",
+ap.add_argument("-o", "--output", action="store", dest="output_file",
                 help="specify the filename converted.")
+ap.add_argument("-c", "--copy", action="store_true", dest="copy_codec",
+                help="specify to copy codec.")
 ap.add_argument("--level", action="store", dest="profile_level",
                 help="specify the profile level.")
 ap.add_argument("--scale", action="store", dest="scale",
